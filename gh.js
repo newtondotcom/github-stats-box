@@ -4,7 +4,7 @@ import 'dotenv/config';
 const kFormat = process.env.K_FORMAT.toString() === 'true';
 const gistId = process.env.GIST_ID;
 
-export async function updateGist(stats, githubToken) {
+export async function updateGistStats(stats, githubToken) {
     const octokit = new Octokit({ auth: githubToken });
     const humanize = (n) => (n >= 1000 ? numeral(n).format(kFormat ? '0.0a' : '0,0') : n);
 
@@ -50,4 +50,26 @@ export async function updateGist(stats, githubToken) {
         .then(() => {
             console.info(`Updated Gist ${gistId} with the following content:\n${gistContent}`);
         });
+}
+
+export async function updateGistRecentCoding(editedFiles, githubToken) {
+    const octokit = new Octokit({ auth: githubToken });
+    const humanize = (n) => (n >= 1000 ? numeral(n).format(kFormat ? '0.0a' : '0,0') : n);
+
+    for (let extension in editedFiles) {
+        if (editedFiles.hasOwnProperty(extension)) {
+            const file = editedFiles[extension];
+            const additions = '+' + file.additions.toString().padStart(4);
+            const deletions = '-' + file.deletions.toString().padStart(4);
+            const percentage = file.percentage.toFixed(1).padStart(5);
+
+            // Calculate progress bar (███████░░░░░░░░░░░░░░░░░)
+            const progressBarLength = 20;
+            const progress = Math.round((file.percentage * progressBarLength) / 100);
+            const progressBar = '█'.repeat(progress) + '░'.repeat(progressBarLength - progress);
+
+            // Print formatted output
+            console.log(`${extension.padEnd(12)} ${additions}/${deletions} ${progressBar}  ${percentage}%`);
+        }
+    }
 }
