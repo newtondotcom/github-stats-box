@@ -5,6 +5,7 @@
     "author": "bokub",
     "license": "MIT",
     "repository": "bokub/github-stats-box",
+    "type": "module",
     "main": "index.js",
     "scripts": {
         "start": "node index.js",
@@ -23,10 +24,11 @@
         "box"
     ],
     "dependencies": {
-        "@octokit/request": "^6.2.2",
         "axios": "^0.27.2",
         "dotenv": "^16.0.3",
-        "numeral": "^2.0.6"
+        "ky": "^1.4.0",
+        "numeral": "^2.0.6",
+        "octokit": "^4.0.2"
     },
     "devDependencies": {
         "@bokub/prettier-config": "^1.1.0",
