@@ -23,7 +23,7 @@ export async function updateGistStats(stats, githubToken) {
         gistContent.push([
             '💾',
             stats.countAllCommits ? `Total Disk Usage` : `Past year Disk Usage`,
-            stats.totalDiskUsage + ' kb',
+            stats.totalDiskUsage + ' kB',
         ]);
     }
 
