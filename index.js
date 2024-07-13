@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 'use strict';
-import { userInfoFetcher, totalCommitsFetcher, recentCommitFilesInfos, getCommitFiles } from './fetch.js';
+import {
+    userInfoFetcher,
+    totalCommitsFetcher,
+    recentCommitFilesInfos,
+    getCommitFiles,
+    wholeDiskSpace,
+} from './fetch.js';
 import { updateGistStats, updateGistRecentCoding } from './gh.js';
 import { extensionToExclude } from './utils.js';
 const githubToken = process.env.GH_TOKEN;
 const countAllCommits = process.env.ALL_COMMITS.toString() === 'true';
 
-async function main() {
+async function gistStats() {
     if (!githubToken) {
         throw new Error('GH_TOKEN is not defined');
     }
@@ -55,17 +61,19 @@ async function getStats() {
 
     stats.totalCommits = user.contributionsCollection.totalCommitContributions;
     if (countAllCommits) {
-        //stats.totalCommits = await totalCommitsFetcher(user.login, githubToken);
-        //not working anymore
+        stats.totalCommits = await totalCommitsFetcher(user.login, githubToken);
+        stats.totalDiskUsage = await wholeDiskSpace(githubToken, stats.name);
     }
 
     return stats;
 }
 
+// Get the commits for each repository younger than 14 days
 async function getRecentCommits() {
     const response = await recentCommitFilesInfos(githubToken);
     const viewer = response.data.data.viewer;
     const repositories = viewer.repositories.edges;
+
     let latestCommits = [];
     repositories.forEach((repo) => {
         if (repo.node.defaultBranchRef == null) {
@@ -91,7 +99,7 @@ async function getRecentCommits() {
 async function getCommitsEditedFilesExtensions(latestCommits) {
     const commits = latestCommits;
     let editedFiles = {};
-    const promises = latestCommits.map(async (commit) => {
+    const promises = commits.map(async (commit) => {
         const files = await getCommitFiles(commit.owner, commit.repo, commit.ref, githubToken);
 
         files.forEach((file) => {
@@ -127,7 +135,10 @@ async function getCommitsEditedFilesExtensions(latestCommits) {
         });
     });
 
+    // Wait for all API calls to finish
     await Promise.all(promises);
+
+    // Calculate the percentage of changes for each extension
     const totalChange = Object.values(editedFiles).reduce((acc, file) => acc + file.changes, 0);
     for (let extension in editedFiles) {
         if (editedFiles.hasOwnProperty(extension)) {
@@ -137,8 +148,25 @@ async function getCommitsEditedFilesExtensions(latestCommits) {
     return editedFiles;
 }
 
-async function main2() {
-    const commits = await getRecentCommits();
+async function gistCoding() {
+    if (!githubToken) {
+        throw new Error('GH_TOKEN is not defined');
+    }
+    let commits;
+    try {
+        commits = await getRecentCommits();
+        console.info('Successfully fetched commits from GitHub from the last 14 days');
+    } catch (e) {
+        throw new Error(`cannot retrieve recent commits: ${e.message}`);
+    }
+    const editedFiles = await getCommitsEditedFilesExtensions(commits);
+    try {
+        await updateGistRecentCoding(editedFiles, githubToken);
+    } catch (e) {
+        throw new Error(`cannot update gist: ${e.message}`);
+    }
+
+    // Test commit for dev without harassing the API
     /*
     const commits = [
         {
@@ -148,16 +176,16 @@ async function main2() {
         },
     ];
     */
-    const editedFiles = await getCommitsEditedFilesExtensions(commits);
-    await updateGistRecentCoding(editedFiles, githubToken);
 }
 
-main().catch((err) => {
+// Launch the gist displaying the stats update
+gistStats().catch((err) => {
     console.error(err.message);
     process.exit(1);
 });
 
-main2().catch((err) => {
+// Launch the gist displaying the recent coding update
+gistCoding().catch((err) => {
     console.error(err.message);
     process.exit(1);
 });

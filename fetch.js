@@ -1,4 +1,3 @@
-import ky from 'ky';
 import axios from 'axios';
 import { Octokit } from '@octokit/core';
 
@@ -53,6 +52,29 @@ export const totalCommitsFetcher = async (login, token) => {
             Authorization: `bearer ${token}`,
         },
     }).then((res) => res.data.total_count);
+};
+
+export const wholeDiskSpace = async (token, username) => {
+    const response = await axios({
+        url: 'https://api.github.com/graphql',
+        method: 'post',
+        headers: {
+            Authorization: `bearer ${token}`,
+        },
+        data: {
+            query: `
+          query {
+              viewer {
+                  repositories(first: 100, orderBy: {field: UPDATED_AT, direction: DESC}, privacy: PUBLIC) {
+                      totalCount
+                      totalDiskUsage
+                  }
+              }
+          }
+          `,
+        },
+    });
+    return response.data.data.viewer.repositories.totalDiskUsage;
 };
 
 export const recentCommitFilesInfos = async (token) => {
