@@ -2,6 +2,7 @@
 'use strict';
 import { userInfoFetcher, totalCommitsFetcher, recentCommitFilesInfos, getCommitFiles } from './fetch.js';
 import { updateGistStats, updateGistRecentCoding } from './gh.js';
+import { extensionToExclude } from './utils.js';
 const githubToken = process.env.GH_TOKEN;
 const countAllCommits = process.env.ALL_COMMITS.toString() === 'true';
 
@@ -18,7 +19,7 @@ async function main() {
         throw new Error(`cannot retrieve statistics: ${e.message}`);
     }
     try {
-        await updateGist(stats, githubToken);
+        await updateGistStats(stats, githubToken);
         null;
     } catch (e) {
         throw new Error(`cannot update gist: ${e.message}`);
@@ -94,7 +95,18 @@ async function getCommitsEditedFilesExtensions(latestCommits) {
         const files = await getCommitFiles(commit.owner, commit.repo, commit.ref, githubToken);
 
         files.forEach((file) => {
-            const extension = file.filename.split('.').pop();
+            let extension = file.filename.split('.').pop();
+
+            // Some files have extensions like 'file.tar.gz'
+            if (extension.split('/').length > 1) {
+                extension = extension.split('/').pop();
+            }
+
+            // Exclude some extensions
+            if (extensionToExclude[extension.toLowerCase()]) {
+                return;
+            }
+
             const additions = file.additions;
             const deletions = file.deletions;
             const changes = additions + deletions;
@@ -108,6 +120,7 @@ async function getCommitsEditedFilesExtensions(latestCommits) {
             if (editedFiles[extension]) {
                 editedFiles[extension].additions += additions;
                 editedFiles[extension].deletions += deletions;
+                editedFiles[extension].changes += changes;
             } else {
                 editedFiles[extension] = editedFile;
             }
@@ -125,7 +138,8 @@ async function getCommitsEditedFilesExtensions(latestCommits) {
 }
 
 async function main2() {
-    //const commits = await getRecentCommits();
+    const commits = await getRecentCommits();
+    /*
     const commits = [
         {
             owner: 'newtondotcom',
@@ -133,6 +147,7 @@ async function main2() {
             ref: 'b2b30f92b6d12a2f15d911c0caa2b6bff3a04bb8',
         },
     ];
+    */
     const editedFiles = await getCommitsEditedFilesExtensions(commits);
     await updateGistRecentCoding(editedFiles, githubToken);
 }
