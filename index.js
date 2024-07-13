@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 import { userInfoFetcher, totalCommitsFetcher, recentCommitFilesInfos, getCommitFiles } from './fetch.js';
-import { updateGist } from './gh.js';
+import { updateGistStats, updateGistRecentCoding } from './gh.js';
 const githubToken = process.env.GH_TOKEN;
 const countAllCommits = process.env.ALL_COMMITS.toString() === 'true';
 
@@ -87,8 +87,54 @@ async function getRecentCommits() {
     return latestCommits;
 }
 
+async function getCommitsEditedFilesExtensions(latestCommits) {
+    const commits = latestCommits;
+    let editedFiles = {};
+    const promises = latestCommits.map(async (commit) => {
+        const files = await getCommitFiles(commit.owner, commit.repo, commit.ref, githubToken);
+
+        files.forEach((file) => {
+            const extension = file.filename.split('.').pop();
+            const additions = file.additions;
+            const deletions = file.deletions;
+            const changes = additions + deletions;
+            const editedFile = {
+                extension,
+                changes,
+                additions,
+                deletions,
+            };
+
+            if (editedFiles[extension]) {
+                editedFiles[extension].additions += additions;
+                editedFiles[extension].deletions += deletions;
+            } else {
+                editedFiles[extension] = editedFile;
+            }
+        });
+    });
+
+    await Promise.all(promises);
+    const totalChange = Object.values(editedFiles).reduce((acc, file) => acc + file.changes, 0);
+    for (let extension in editedFiles) {
+        if (editedFiles.hasOwnProperty(extension)) {
+            editedFiles[extension].percentage = (editedFiles[extension].changes / totalChange) * 100;
+        }
+    }
+    return editedFiles;
+}
+
 async function main2() {
-    const commits = await getRecentCommits();
+    //const commits = await getRecentCommits();
+    const commits = [
+        {
+            owner: 'newtondotcom',
+            repo: 'github-stats-box',
+            ref: 'b2b30f92b6d12a2f15d911c0caa2b6bff3a04bb8',
+        },
+    ];
+    const editedFiles = await getCommitsEditedFilesExtensions(commits);
+    await updateGistRecentCoding(editedFiles, githubToken);
 }
 
 main2().catch((err) => {
