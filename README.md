@@ -42,3 +42,7 @@
 That's it! You gist will be updated immediately, and every 12 hours after that
 
 > Note : the total disk space only takes in consideration the 100 first repo
+
+## Development
+
+I will soon try to use an other fetch API such as [ofetch](https://github.com/unjs/ofetch) or [ky](https://github.com/sindresorhus/ky).
