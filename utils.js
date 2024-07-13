@@ -2,7 +2,7 @@ export const extensionToName = {
     ag: 'Angular',
     ts: 'TypeScript',
     js: 'JavaScript',
-    jsx: 'JavaScript',
+    jsx: 'JSX',
     html: 'HTML',
     css: 'CSS',
     md: 'Markdown',
@@ -18,7 +18,7 @@ export const extensionToName = {
     swift: 'Swift',
     kotlin: 'Kotlin',
     rs: 'Rust',
-    tsx: 'TypeScript',
+    tsx: 'TSX',
     sh: 'Shell',
     yaml: 'YAML',
     xml: 'XML',
@@ -96,4 +96,25 @@ export const extensionToName = {
     pdb: 'PDB',
     bak: 'Backup',
     temp: 'Temp',
+    pbxproj: 'Pbxproj',
 };
+
+export const extensionToExclude = {
+    lock: true,
+    min: true,
+    map: true,
+    gz: true,
+    br: true,
+    bz2: true,
+    xz: true,
+    zst: true,
+    json: true,
+    yaml: true,
+    license: true,
+    Pbxproj: true,
+};
+
+export function capitalizeFirstLetter(string) {
+    if (!string) return string;
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
