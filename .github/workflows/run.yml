@@ -27,7 +27,8 @@ jobs:
                   # Edit the following environment variables
                   GIST_ID_STATS: eb2a115110493c74251d5482def01d69 # The ID portion from your stats gist url
                   GIST_ID_CODING: 5977e4d4cdc807af11bcae4a1ddf277a # The ID portion from your coding activity gist url
-                  ALL_COMMITS: true # If `true` it will count all commits, if `false` it will count your last year commits
+
+                  ALL_COMMITS: true # If `true` it will count all commits, if `false` it will count your last year commits and disk space
                   K_FORMAT: true # If `true`, large numbers will be formatted with a "k", for example "1.5k"
 
                   STATS_VERSION: 1 # 1 : version with disk usage, 2 : version with pull requests number

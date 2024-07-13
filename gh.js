@@ -20,7 +20,11 @@ export async function updateGistStats(stats, githubToken) {
     if (STATS_VERSION === '2') {
         gistContent.push(['🔀', `Total PRs`, humanize(stats.totalPRs)]);
     } else {
-        gistContent.push(['💾', `Total Disk Usage`, stats.totalDiskUsage + ' kb']);
+        gistContent.push([
+            '💾',
+            stats.countAllCommits ? `Total Disk Usage` : `Past year Disk Usage`,
+            stats.totalDiskUsage + ' kb',
+        ]);
     }
 
     gistContent =

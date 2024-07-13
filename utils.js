@@ -111,7 +111,7 @@ export const extensionToExclude = {
     json: true,
     yaml: true,
     license: true,
-    Pbxproj: true,
+    pbxproj: true,
 };
 
 export function capitalizeFirstLetter(string) {
