@@ -6,7 +6,8 @@
       <img src="https://raw.github.com/newtondotcom/github-stats-box/images/code.png">
   </a>
   <h3 align="center">github-stats-box</h3>
-  <p align="center">⚡️📌 Update two cool pinned gists to contain your GitHub stats</p>
+  <p align="center">⚡️📌 Automatically update your pinned gists to display your latest GitHub stats</p>
+
 </p>
 
 ---
