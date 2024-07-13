@@ -26,7 +26,6 @@
     "dependencies": {
         "axios": "^0.27.2",
         "dotenv": "^16.0.3",
-        "ky": "^1.4.0",
         "numeral": "^2.0.6",
         "octokit": "^4.0.2"
     },
