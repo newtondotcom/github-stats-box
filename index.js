@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-import { userInfoFetcher, totalCommitsFetcher, recentCommitFilesInfos } from './fetch.js';
+import { userInfoFetcher, totalCommitsFetcher, recentCommitFilesInfos, getCommitFiles } from './fetch.js';
 import { updateGist } from './gh.js';
 const githubToken = process.env.GH_TOKEN;
 const countAllCommits = process.env.ALL_COMMITS.toString() === 'true';
@@ -61,7 +61,37 @@ async function getStats() {
     return stats;
 }
 
-main().catch((err) => {
+async function getRecentCommits() {
+    const response = await recentCommitFilesInfos(githubToken);
+    const viewer = response.data.data.viewer;
+    const repositories = viewer.repositories.edges;
+    let latestCommits = [];
+    repositories.forEach((repo) => {
+        if (repo.node.defaultBranchRef == null) {
+            return;
+        }
+        const commitInfo = repo.node.defaultBranchRef.target.history.edges;
+        if (commitInfo.length === 0) {
+            return;
+        }
+        const repoRecentCommits = commitInfo.map((commit) => {
+            const path = commit.node.resourcePath;
+            return {
+                owner: path.split('/')[1],
+                repo: path.split('/')[2],
+                ref: path.split('/')[4],
+            };
+        });
+        latestCommits.push(...repoRecentCommits);
+    });
+    return latestCommits;
+}
+
+async function main2() {
+    const commits = await getRecentCommits();
+}
+
+main2().catch((err) => {
     console.error(err.message);
     process.exit(1);
 });
