@@ -19,6 +19,7 @@ export const userInfoFetcher = (token) => {
             }
             repositoriesContributedTo(first: 1, contributionTypes: [COMMIT, ISSUE, PULL_REQUEST, REPOSITORY]) {
               totalCount
+              totalDiskUsage
             }
             pullRequests(first: 1) {
               totalCount

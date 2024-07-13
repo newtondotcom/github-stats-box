@@ -11,10 +11,11 @@ export async function updateGist(stats, githubToken) {
     const gistContent =
         [
             ['⭐', `Total Stars`, humanize(stats.totalStars)],
-            ['➕', countAllCommits ? 'Total Commits' : 'Past Year Commits', humanize(stats.totalCommits)],
+            ['➕', stats.countAllCommits ? 'Total Commits' : 'Past Year Commits', humanize(stats.totalCommits)],
             ['🔀', `Total PRs`, humanize(stats.totalPRs)],
             ['🚩', `Total Issues`, humanize(stats.totalIssues)],
             ['📦', `Contributed to`, humanize(stats.contributedTo)],
+            ['💾', `Past Year Space Disk Used`, stats.totalDiskUsage + 'kB'],
         ]
             .map((content) => {
                 let line = `${content[1]}:${content[2]}`;

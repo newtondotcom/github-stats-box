@@ -33,7 +33,13 @@ async function getStats() {
         totalIssues: 0,
         totalStars: 0,
         contributedTo: 0,
+        totalDiskUsage: 0,
+        countAllCommits: false,
     };
+
+    if (countAllCommits) {
+        stats.countAllCommits = true;
+    }
 
     const user = await userInfoFetcher(githubToken).then((res) => res.data.data.viewer);
 
@@ -41,13 +47,15 @@ async function getStats() {
     stats.totalPRs = user.pullRequests.totalCount;
     stats.totalIssues = user.issues.totalCount;
     stats.contributedTo = user.repositoriesContributedTo.totalCount;
+    stats.totalDiskUsage = user.repositoriesContributedTo.totalDiskUsage;
     stats.totalStars = user.repositories.nodes.reduce((prev, curr) => {
         return prev + curr.stargazers.totalCount;
     }, 0);
 
     stats.totalCommits = user.contributionsCollection.totalCommitContributions;
     if (countAllCommits) {
-        stats.totalCommits = await totalCommitsFetcher(user.login, githubToken);
+        //stats.totalCommits = await totalCommitsFetcher(user.login, githubToken);
+        //not working anymore
     }
 
     return stats;
