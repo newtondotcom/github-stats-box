@@ -99,3 +99,16 @@ export const recentCommitFilesInfos = async (token) => {
         },
     });
 };
+
+export const getCommitFiles = async (owner, repo, ref, token) => {
+    const octokit = new Octokit({ auth: token });
+    const data = await octokit.request('GET /repos/{owner}/{repo}/commits/{ref}', {
+        owner: owner,
+        repo: repo,
+        ref: ref,
+        headers: {
+            'X-GitHub-Api-Version': '2022-11-28',
+        },
+    });
+    return data.data.files;
+};
