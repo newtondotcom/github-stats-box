@@ -1,5 +1,6 @@
 import ky from 'ky';
 import axios from 'axios';
+import { Octokit } from '@octokit/core';
 
 export const userInfoFetcher = (token) => {
     return axios({
@@ -52,4 +53,49 @@ export const totalCommitsFetcher = async (login, token) => {
             Authorization: `bearer ${token}`,
         },
     }).then((res) => res.data.total_count);
+};
+
+export const recentCommitFilesInfos = async (token) => {
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    twoWeeksAgo.getDate();
+    const date = twoWeeksAgo.toISOString();
+    //const date = "20180818T032310Z";
+
+    return axios({
+        url: 'https://api.github.com/graphql',
+        method: 'post',
+        headers: {
+            Authorization: `bearer ${token}`,
+        },
+        data: {
+            query: `
+      query {
+        viewer {
+          repositories(first: 100, orderBy: {field: CREATED_AT, direction: DESC}) {
+            edges {
+              node {
+                nameWithOwner
+                defaultBranchRef {
+                  target {
+                    ... on Commit {
+                      history(since : "${date}") {
+                        edges {
+                          node {
+                            oid
+                            resourcePath
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      `,
+        },
+    });
 };
