@@ -1,8 +1,10 @@
 import { Octokit } from '@octokit/core';
 import numeral from 'numeral';
 import 'dotenv/config';
+import { extensionToName } from './utils.js';
 const kFormat = process.env.K_FORMAT.toString() === 'true';
-const gistId = process.env.GIST_ID;
+const gistIdStats = process.env.GIST_ID_STATS;
+const gistIdCoding = process.env.GIST_ID_CODING;
 
 export async function updateGistStats(stats, githubToken) {
     const octokit = new Octokit({ auth: githubToken });
@@ -26,7 +28,7 @@ export async function updateGistStats(stats, githubToken) {
             .join('\n') + '\n';
 
     const gist = await octokit.request('GET /gists/:gist_id', {
-        gist_id: gistId,
+        gist_id: gistIdStats,
         headers: { authorization: `token ${githubToken}` },
     });
     const filename = Object.keys(gist.data.files)[0];
@@ -54,13 +56,16 @@ export async function updateGistStats(stats, githubToken) {
 
 export async function updateGistRecentCoding(editedFiles, githubToken) {
     const octokit = new Octokit({ auth: githubToken });
-    const humanize = (n) => (n >= 1000 ? numeral(n).format(kFormat ? '0.0a' : '0,0') : n);
+    const humanize = (n) => (n >= 1000 ? numeral(n).format('0.0a') : n);
+    let gistContent = '';
 
     for (let extension in editedFiles) {
         if (editedFiles.hasOwnProperty(extension)) {
+            // Get the file data
             const file = editedFiles[extension];
-            const additions = '+' + file.additions.toString().padStart(4);
-            const deletions = '-' + file.deletions.toString().padStart(4);
+            const fullExtension = extensionToName[extension] || extension;
+            const additions = '+' + humanize(file.additions).toString().padStart(2);
+            const deletions = '-' + humanize(file.deletions).toString().padStart(1);
             const percentage = file.percentage.toFixed(1).padStart(5);
 
             // Calculate progress bar (███████░░░░░░░░░░░░░░░░░)
@@ -68,8 +73,40 @@ export async function updateGistRecentCoding(editedFiles, githubToken) {
             const progress = Math.round((file.percentage * progressBarLength) / 100);
             const progressBar = '█'.repeat(progress) + '░'.repeat(progressBarLength - progress);
 
+            // End the progress bar with a marker (▌)
+            const progressBarWithMarker = progressBar.slice(0, progressBarLength - 1) + '▌';
+
             // Print formatted output
-            console.log(`${extension.padEnd(12)} ${additions}/${deletions} ${progressBar}  ${percentage}%`);
+            const line = `${fullExtension.padEnd(
+                15
+            )} ${additions}/${deletions} ${progressBarWithMarker}  ${percentage}%`;
+            gistContent += line + '\n';
         }
     }
+
+    const gist = await octokit.request('GET /gists/:gist_id', {
+        gist_id: gistIdCoding,
+        headers: { authorization: `token ${githubToken}` },
+    });
+    const filename = Object.keys(gist.data.files)[0];
+
+    if (gist.data.files[filename].content === gistContent) {
+        console.info('Nothing to update');
+        return;
+    }
+
+    return octokit
+        .request('PATCH /gists/:gist_id', {
+            files: {
+                [filename]: {
+                    filename: `Recent Coding Activity`,
+                    content: gistContent,
+                },
+            },
+            gist_id: gistIdCoding,
+            headers: { authorization: `token ${githubToken}` },
+        })
+        .then(() => {
+            console.info(`Updated Gist ${gistIdCoding} with the following content:\n${gistContent}`);
+        });
 }
