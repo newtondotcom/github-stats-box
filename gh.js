@@ -1,24 +1,30 @@
 import { Octokit } from '@octokit/core';
 import numeral from 'numeral';
 import 'dotenv/config';
-import { extensionToName } from './utils.js';
+import { extensionToName, capitalizeFirstLetter, extensionToExclude } from './utils.js';
 const kFormat = process.env.K_FORMAT.toString() === 'true';
 const gistIdStats = process.env.GIST_ID_STATS;
 const gistIdCoding = process.env.GIST_ID_CODING;
+const STATS_VERSION = process.env.STATS_VERSION || '1';
 
 export async function updateGistStats(stats, githubToken) {
     const octokit = new Octokit({ auth: githubToken });
     const humanize = (n) => (n >= 1000 ? numeral(n).format(kFormat ? '0.0a' : '0,0') : n);
 
-    const gistContent =
-        [
-            ['⭐', `Total Stars`, humanize(stats.totalStars)],
-            ['➕', stats.countAllCommits ? 'Total Commits' : 'Past Year Commits', humanize(stats.totalCommits)],
-            ['🔀', `Total PRs`, humanize(stats.totalPRs)],
-            ['🚩', `Total Issues`, humanize(stats.totalIssues)],
-            ['📦', `Contributed to`, humanize(stats.contributedTo)],
-            ['💾', `Past Year Space Disk Used`, stats.totalDiskUsage + 'kB'],
-        ]
+    let gistContent = [
+        ['⭐', `Total Stars`, humanize(stats.totalStars)],
+        ['➕', stats.countAllCommits ? 'Total Commits' : 'Past Year Commits', humanize(stats.totalCommits)],
+        ['🚩', `Total Issues`, humanize(stats.totalIssues)],
+        ['📦', `Contributed to`, humanize(stats.contributedTo)],
+    ];
+    if (STATS_VERSION === '2') {
+        gistContent.push(['🔀', `Total PRs`, humanize(stats.totalPRs)]);
+    } else {
+        gistContent.push(['💾', `Total Disk Usage`, stats.totalDiskUsage + ' kb']);
+    }
+
+    gistContent =
+        gistContent
             .map((content) => {
                 let line = `${content[1]}:${content[2]}`;
                 line = line.replace(':', ':' + ' '.repeat(45 - line.length));
@@ -46,43 +52,56 @@ export async function updateGistStats(stats, githubToken) {
                     content: gistContent,
                 },
             },
-            gist_id: gistId,
+            gist_id: gistIdStats,
             headers: { authorization: `token ${githubToken}` },
         })
         .then(() => {
-            console.info(`Updated Gist ${gistId} with the following content:\n${gistContent}`);
+            console.info(`Updated Gist ${gistIdStats} with the following content:\n${gistContent}`);
         });
 }
 
 export async function updateGistRecentCoding(editedFiles, githubToken) {
     const octokit = new Octokit({ auth: githubToken });
-    const humanize = (n) => (n >= 1000 ? numeral(n).format('0.0a') : n);
+    const humanize = (n) => (n >= 1000 ? numeral(n).format('0a') : n);
     let gistContent = '';
+    let lines = [];
+
+    const lengthExtension = 13;
+    const progressBarLength = 19;
 
     for (let extension in editedFiles) {
         if (editedFiles.hasOwnProperty(extension)) {
-            // Get the file data
             const file = editedFiles[extension];
-            const fullExtension = extensionToName[extension] || extension;
-            const additions = '+' + humanize(file.additions).toString().padStart(2);
-            const deletions = '-' + humanize(file.deletions).toString().padStart(1);
+            let fullExtension = extensionToName[extension] || capitalizeFirstLetter(extension);
+
+            // Truncate extension if it's too long
+            if (fullExtension.length > lengthExtension) {
+                fullExtension = fullExtension.slice(0, lengthExtension - 1) + '…';
+            }
+
+            // Ensure additions and deletions take up 7 characters
+            const additions = ('+' + humanize(file.additions)).toString().padStart(3, ' ').padEnd(4, ' ');
+            const deletions = ('-' + humanize(file.deletions)).toString().padStart(3, ' ').padEnd(4, ' ');
             const percentage = file.percentage.toFixed(1).padStart(5);
 
-            // Calculate progress bar (███████░░░░░░░░░░░░░░░░░)
-            const progressBarLength = 20;
+            // Calculate progress bar
             const progress = Math.round((file.percentage * progressBarLength) / 100);
-            const progressBar = '█'.repeat(progress) + '░'.repeat(progressBarLength - progress);
+            const progressBar = '█'.repeat(progress) + '▌' + '░'.repeat(progressBarLength - progress - 1);
+            const progressBarWithMarker = progressBar.slice(0, progressBarLength - 1);
 
-            // End the progress bar with a marker (▌)
-            const progressBarWithMarker = progressBar.slice(0, progressBarLength - 1) + '▌';
-
-            // Print formatted output
+            // Create a formatted line
             const line = `${fullExtension.padEnd(
-                15
-            )} ${additions}/${deletions} ${progressBarWithMarker}  ${percentage}%`;
-            gistContent += line + '\n';
+                17
+            )} ${additions}/${deletions} ${progressBarWithMarker} ${percentage}%`;
+            lines.push({ percentage: file.percentage, line });
         }
     }
+
+    // Sort lines by percentage in descending order
+    lines.sort((a, b) => b.percentage - a.percentage);
+
+    // Concatenate sorted lines into gistContent
+    gistContent = lines.map((entry) => entry.line).join('\n') + '\n';
 
     const gist = await octokit.request('GET /gists/:gist_id', {
         gist_id: gistIdCoding,
